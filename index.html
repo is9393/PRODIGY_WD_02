@@ -5,14 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stopwatch Web Application</title>
     <style>
-        /* CSS Reset and Base Styles */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
-        /* Body and Background */
         body {
             font-family: 'Arial', sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -23,7 +21,6 @@
             color: white;
         }
 
-        /* Main Container with Glassmorphism Effect */
         .container {
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
@@ -36,11 +33,135 @@
             width: 90%;
         }
 
-        /* Header Styling */
         h1 {
             margin-bottom: 30px;
             font-size: 2.5em;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .display {
+            font-size: 4em;
+            font-weight: bold;
+            margin: 30px 0;
+            font-family: 'Courier New', monospace;
+            background: rgba(0,0,0,0.2);
+            padding: 20px;
+            border-radius: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 30px 0;
+        }
+
+        button {
+            padding: 15px 25px;
+            font-size: 1.2em;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            min-width: 120px;
+        }
+
+        .start {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+        }
+
+        .start:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+        }
+
+        .pause {
+            background: linear-gradient(45deg, #ff9800, #f57c00);
+            color: white;
+        }
+
+        .pause:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 152, 0, 0.4);
+        }
+
+        .reset {
+            background: linear-gradient(45deg, #f44336, #d32f2f);
+            color: white;
+        }
+
+        .reset:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(244, 67, 54, 0.4);
+        }
+
+        .lap {
+            background: linear-gradient(45deg, #2196F3, #1976D2);
+            color: white;
+        }
+
+        .lap:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(33, 150, 243, 0.4);
+        }
+
+        .lap-times {
+            margin-top: 30px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .lap-times h3 {
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        .lap-time {
+            background: rgba(255, 255, 255, 0.1);
+            margin: 5px 0;
+            padding: 10px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .lap-times::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .lap-times::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        .lap-times::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+        }
+
+        @media (max-width: 600px) {
+            .display {
+                font-size: 2.5em;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            button {
+                width: 100%;
+                max-width: 200px;
+            }
         }
     </style>
 </head>
@@ -48,18 +169,96 @@
     <div class="container">
         <h1>⏱️ Stopwatch</h1>
         
-        <!-- Display will be added in next commit -->
         <div class="display" id="display">00:00:00</div>
         
-        <!-- Controls will be added in next commit -->
-        <div class="controls" id="controls">
-            <!-- Buttons will be added here -->
+        <div class="controls">
+            <button class="start" id="startBtn" onclick="startTimer()">Start</button>
+            <button class="pause" id="pauseBtn" onclick="pauseTimer()">Pause</button>
+            <button class="reset" id="resetBtn" onclick="resetTimer()">Reset</button>
+            <button class="lap" id="lapBtn" onclick="recordLap()">Lap</button>
         </div>
         
-        <!-- Lap times section will be added later -->
         <div class="lap-times" id="lapTimes">
-            <!-- Lap functionality will be added later -->
+            <h3>Lap Times</h3>
+            <div id="lapList"></div>
         </div>
     </div>
+
+    <script>
+        let startTime = 0;
+        let elapsedTime = 0;
+        let timerInterval = null;
+        let isRunning = false;
+        let lapCount = 0;
+
+        function formatTime(milliseconds) {
+            const totalSeconds = Math.floor(milliseconds / 1000);
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            const ms = Math.floor((milliseconds % 1000) / 10);
+
+            return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}:${ms.toString().padStart(2, '0')}`;
+        }
+
+        function updateDisplay() {
+            const currentTime = Date.now();
+            elapsedTime = currentTime - startTime;
+            document.getElementById('display').textContent = formatTime(elapsedTime);
+        }
+
+        function startTimer() {
+            if (!isRunning) {
+                startTime = Date.now() - elapsedTime;
+                timerInterval = setInterval(updateDisplay, 10);
+                isRunning = true;
+                
+                document.getElementById('startBtn').textContent = 'Running...';
+                document.getElementById('startBtn').style.background = 'linear-gradient(45deg, #81C784, #66BB6A)';
+            }
+        }
+
+        function pauseTimer() {
+            if (isRunning) {
+                clearInterval(timerInterval);
+                isRunning = false;
+                
+                document.getElementById('startBtn').textContent = 'Resume';
+                document.getElementById('startBtn').style.background = 'linear-gradient(45deg, #4CAF50, #45a049)';
+            }
+        }
+
+        function resetTimer() {
+            clearInterval(timerInterval);
+            isRunning = false;
+            startTime = 0;
+            elapsedTime = 0;
+            lapCount = 0;
+            
+            document.getElementById('display').textContent = '00:00:00';
+            document.getElementById('startBtn').textContent = 'Start';
+            document.getElementById('startBtn').style.background = 'linear-gradient(45deg, #4CAF50, #45a049)';
+            document.getElementById('lapList').innerHTML = '';
+        }
+
+        function recordLap() {
+            if (isRunning) {
+                lapCount++;
+                const lapTime = formatTime(elapsedTime);
+                const lapElement = document.createElement('div');
+                lapElement.className = 'lap-time';
+                lapElement.innerHTML = `
+                    <span>Lap ${lapCount}</span>
+                    <span>${lapTime}</span>
+                `;
+                document.getElementById('lapList').appendChild(lapElement);
+                
+                // Scroll to the latest lap
+                document.getElementById('lapTimes').scrollTop = document.getElementById('lapTimes').scrollHeight;
+            }
+        }
+
+        // Initialize display
+        document.getElementById('display').textContent = '00:00:00';
+    </script>
 </body>
 </html>
